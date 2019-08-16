@@ -25,7 +25,7 @@ impl<T: Debug + Clone + Add + Mul> Polynomial<T> {
 				let delimiter = " + ";
 				let mut i = 0;
 				let mut coefficients_clone = self.coefficients.clone();
-				let mut so_far = Self::to_string_term(coefficients_clone.pop().unwrap(), VARIABLE.to_string(), i);
+				let mut so_far = Self::to_string_term(coefficients_clone.remove(0), VARIABLE.to_string(), i);
 				for a in coefficients_clone {
 					i = i + 1;
 					so_far = format!("{}{}{}", so_far, delimiter, Self::to_string_term(a, VARIABLE.to_string(), i));
@@ -56,13 +56,13 @@ mod test {
 	#[test]
 	fn test_polynomial_initializes() {
 		let p_over_c = Polynomial::new(vec![Complex::new(2.0, 3.0), Complex::new(-6.5, 2.1)]);
-		assert_eq!(p_over_c.to_string(), "(2.0 + 3.0i) + (-6.5 + 2.1)x".to_string());
+		assert_eq!(p_over_c.to_string(), "Complex { re: 2.0, im: 3.0 } + Complex { re: -6.5, im: 2.1 }x".to_string());
 
 		let p_over_r = Polynomial::new(vec![3.521, 9.0, -12.6, 4.5]);
 		assert_eq!(p_over_r.to_string(), "3.521 + 9.0x + -12.6x^2 + 4.5x^3".to_string());
 
 		let p_over_z = Polynomial::new(vec![-7, 4, -100]);
-		assert_eq!(p_over_z.to_string(), "7 + 4x + -100^2".to_string());
+		assert_eq!(p_over_z.to_string(), "-7 + 4x + -100x^2".to_string());
 
 	}
 }
