@@ -5,7 +5,7 @@ use num::complex::Complex;
 
 const VARIABLE: &str = "x";
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Polynomial<T: Debug + Clone + Add + Mul> {
 	coefficients: Vec<T>
 }
@@ -63,6 +63,9 @@ mod test {
 
 		let p_over_z = Polynomial::new(vec![-7, 4, -100]);
 		assert_eq!(p_over_z.to_string(), "-7 + 4x + -100x^2".to_string());
+
+		let same_p_over_z = Polynomial::new(vec![-7, 4, -100]);
+		assert_eq!(p_over_z, same_p_over_z);
 
 	}
 }
