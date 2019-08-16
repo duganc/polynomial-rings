@@ -10,6 +10,26 @@ pub struct Polynomial<T: Debug + Clone + Add + Mul> {
 	coefficients: Vec<T>
 }
 
+impl<T: Debug + Clone + Add<Output = T> + Mul<Output = T>> Add for Polynomial<T> {
+	type Output = Self;
+
+	fn add(self, other: Self) -> Self {
+		let mut to_return: Vec<T> = Vec::new();
+		let self_coefficients = self.coefficients.clone();
+		let other_coefficients = other.coefficients.clone();
+		let longer_coefficients = if self_coefficients.len() >= other_coefficients.len() { self_coefficients.clone() } else { other_coefficients.clone() };
+		let shorter_coefficients = if self_coefficients.len() < other_coefficients.len() { self_coefficients } else { other_coefficients };
+		for (a, b) in longer_coefficients.iter().zip(shorter_coefficients.iter()) {
+			let sum: T = a.clone() + b.clone();
+			to_return.push(sum);
+		}
+		for i in (longer_coefficients.len() - shorter_coefficients.len() + 1)..(longer_coefficients.len()) {
+			to_return.push(longer_coefficients[i].clone());
+		}
+		Polynomial::new(to_return)
+	}
+}
+
 impl<T: Debug + Clone + Add + Mul> Polynomial<T> {
 
 	pub fn new(coefficients: Vec<T>) -> Self {
@@ -67,5 +87,15 @@ mod test {
 		let same_p_over_z = Polynomial::new(vec![-7, 4, -100]);
 		assert_eq!(p_over_z, same_p_over_z);
 
+	}
+
+	#[test]
+	fn test_polynomial_adds() {
+
+		let p = Polynomial::new(vec![3, 2, 1]);
+		let q = Polynomial::new(vec![9, 5, 4, 2, 2]);
+
+		let r = p + q;
+		assert_eq!(r, Polynomial::new(vec![12, 7, 5, 2, 2]));
 	}
 }
