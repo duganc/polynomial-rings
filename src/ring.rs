@@ -65,6 +65,13 @@ impl<T: Debug + Copy + Add + Mul> Polynomial<T> {
 		Self::new(Vec::new())
 	}
 
+	pub fn get_degree(&self) -> i8 {
+		match self.coefficients.len() {
+			0 => -1,
+			_ => (self.coefficients.len() - 1) as i8
+		}
+	}
+
 	pub fn to_string(&self) -> String {
 		match self.coefficients.len() {
 			0 => "0".to_string(),
@@ -122,6 +129,12 @@ mod test {
 		let same_p_over_z = Polynomial::new(vec![-7, 4, -100]);
 		assert_eq!(p_over_z, same_p_over_z);
 
+	}
+
+	#[test]
+	fn test_degree() {
+		assert_eq!(Polynomial::<u16>::zero().get_degree(), -1);
+		assert_eq!(Polynomial::new(vec!(5, 4, 3, 2, 1)).get_degree(), 4);
 	}
 
 	#[test]

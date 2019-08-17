@@ -6,6 +6,10 @@ Tool to help understand rings of polynomials.
 
 ## Acceptance Criteria
 
+[ ] Polynomial
+	[ ] Zero
+	[ ] Add
+	[ ] Multiply
 [ ] Can specify a ring over polynomials of the following fields
 	[ ] Complex Numbers
 	[ ] Real Numbers
@@ -22,4 +26,11 @@ Tool to help understand rings of polynomials.
 
 ## Burndown
 
-[ ] 
+
+Next
+	[ ] Design Ring interface
+
+
+
+Miscellaneous
+	[ ] Improve complex pretty printing
