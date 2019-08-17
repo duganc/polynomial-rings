@@ -5,37 +5,64 @@ use num::complex::Complex;
 
 const VARIABLE: &str = "x";
 
-#[derive(Debug, PartialEq)]
-pub struct Polynomial<T: Debug + Clone + Add + Mul> {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Polynomial<T: Debug + Copy + Add + Mul> {
 	coefficients: Vec<T>
 }
 
-impl<T: Debug + Clone + Add<Output = T> + Mul<Output = T>> Add for Polynomial<T> {
+impl<T: Debug + Copy + Add<Output = T> + Mul<Output = T>> Add for Polynomial<T> {
 	type Output = Self;
 
 	fn add(self, other: Self) -> Self {
 		let mut to_return: Vec<T> = Vec::new();
-		let self_coefficients = self.coefficients.clone();
-		let other_coefficients = other.coefficients.clone();
-		let longer_coefficients = if self_coefficients.len() >= other_coefficients.len() { self_coefficients.clone() } else { other_coefficients.clone() };
-		let shorter_coefficients = if self_coefficients.len() < other_coefficients.len() { self_coefficients } else { other_coefficients };
+		
+		let (longer_coefficients, shorter_coefficients) = Self::get_longer_and_shorter(&self, &other);
 		for (a, b) in longer_coefficients.iter().zip(shorter_coefficients.iter()) {
 			let sum: T = a.clone() + b.clone();
 			to_return.push(sum);
 		}
-		for i in (longer_coefficients.len() - shorter_coefficients.len() + 1)..(longer_coefficients.len()) {
+		for i in shorter_coefficients.len()..longer_coefficients.len() {
 			to_return.push(longer_coefficients[i].clone());
 		}
 		Polynomial::new(to_return)
 	}
 }
 
-impl<T: Debug + Clone + Add + Mul> Polynomial<T> {
+impl<T: Debug + Copy + Add<Output = T> + Mul<Output = T>> Mul for Polynomial<T> {
+	type Output = Self;
+
+	fn mul(self, other: Self) -> Self {
+		let mut to_return: Vec<T> = Vec::new();
+		
+		let mut i = 0;
+		for a in self.coefficients {
+			let mut j = 0;
+			for b in &other.coefficients {
+				let power = i + j;
+				let is_new_coefficient = power >= to_return.len();
+				match is_new_coefficient {
+					true => to_return.push(a.clone() * b.clone()),
+					false => to_return[power] = to_return[power] + (a.clone() * b.clone())
+				};
+				j = j + 1;
+			}
+			i = i + 1;
+		}
+
+		return Polynomial::new(to_return);
+	}
+}
+
+impl<T: Debug + Copy + Add + Mul> Polynomial<T> {
 
 	pub fn new(coefficients: Vec<T>) -> Self {
 		Self {
 			coefficients
 		}
+	}
+
+	pub fn zero() -> Self {
+		Self::new(Vec::new())
 	}
 
 	pub fn to_string(&self) -> String {
@@ -67,6 +94,14 @@ impl<T: Debug + Clone + Add + Mul> Polynomial<T> {
 		}
 	}
 
+	fn get_longer_and_shorter(left: &Polynomial<T>, right: &Polynomial<T>) -> (Vec<T>, Vec<T>) {
+		let self_coefficients = left.coefficients.clone();
+		let other_coefficients = right.coefficients.clone();
+		let longer_coefficients = if self_coefficients.len() >= other_coefficients.len() { self_coefficients.clone() } else { other_coefficients.clone() };
+		let shorter_coefficients = if self_coefficients.len() < other_coefficients.len() { self_coefficients } else { other_coefficients };
+		return (longer_coefficients, shorter_coefficients);
+	}
+
 }
 
 #[cfg(test)]
@@ -95,7 +130,43 @@ mod test {
 		let p = Polynomial::new(vec![3, 2, 1]);
 		let q = Polynomial::new(vec![9, 5, 4, 2, 2]);
 
-		let r = p + q;
+		let r = p.clone() + q.clone();
 		assert_eq!(r, Polynomial::new(vec![12, 7, 5, 2, 2]));
+		assert_eq!(q + p, r);
+	}
+
+	#[test]
+	fn test_polynomial_adds_zero() {
+
+		let p = Polynomial::new(vec![3, 2, 1]);
+		let q = Polynomial::zero();
+
+		let r = p.clone() + q.clone();
+		assert_eq!(r, p);
+		assert_eq!(q + p, r);
+	}
+
+	#[test]
+	fn test_polynomial_multiplies() {
+
+		let p = Polynomial::new(vec![9, 3, 1]); // x^2 + 3x + 9
+		let q = Polynomial::new(vec![5, 1]); // x + 5
+
+		let r = p.clone() * q.clone(); // x^3 + 8x^2 + 12x + 45
+		assert_eq!(r, Polynomial::new(vec![45, 24, 8, 1]));
+		assert_eq!(r, q * p);
+
+	}
+
+	#[test]
+	fn test_polynomial_multiplies_zero() {
+
+		let p = Polynomial::new(vec![9, 3, 1]);
+		let q = Polynomial::zero();
+
+		let r = p.clone() * q.clone();
+		assert_eq!(r, Polynomial::zero());
+		assert_eq!(r, q * p);
+
 	}
 }
