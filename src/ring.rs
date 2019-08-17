@@ -1,3 +1,4 @@
+use num::Zero;
 use std::fmt::Debug;
 use std::ops::Add;
 use std::ops::Mul;
@@ -5,12 +6,38 @@ use num::complex::Complex;
 
 const VARIABLE: &str = "x";
 
+#[derive(Debug)]
+pub struct QuotientRing<T: Debug + Copy + Add<Output = T> + Zero + Mul<Output = T>> {
+	ideal_generator: Polynomial<T>
+}
+
+impl<T: Debug + Copy + Add<Output = T> + Zero + Mul<Output = T>> QuotientRing<T> {
+
+	pub fn new(ideal_generator: Polynomial<T>) -> Self {
+		QuotientRing {
+			ideal_generator
+		}
+	}
+
+	pub fn get_representative(&self, element: Polynomial<T>) -> Polynomial<T> {
+		Polynomial::zero()
+	}
+
+	fn reduce(&self, element: Polynomial<T>) -> Option<Polynomial<T>> {
+		let degree = self.ideal_generator.get_degree();
+		if degree > element.get_degree() {
+			return None;
+		}
+
+	}
+}
+
 #[derive(Debug, PartialEq, Clone)]
-pub struct Polynomial<T: Debug + Copy + Add + Mul> {
+pub struct Polynomial<T: Debug + Copy + Add<Output = T> + Zero + Mul<Output = T>> {
 	coefficients: Vec<T>
 }
 
-impl<T: Debug + Copy + Add<Output = T> + Mul<Output = T>> Add for Polynomial<T> {
+impl<T: Debug + Copy + Add<Output = T> + Zero + Mul<Output = T>> Add for Polynomial<T> {
 	type Output = Self;
 
 	fn add(self, other: Self) -> Self {
@@ -28,7 +55,18 @@ impl<T: Debug + Copy + Add<Output = T> + Mul<Output = T>> Add for Polynomial<T> 
 	}
 }
 
-impl<T: Debug + Copy + Add<Output = T> + Mul<Output = T>> Mul for Polynomial<T> {
+impl<T: Debug + Copy + Add<Output = T> + Zero + Mul<Output = T>> Zero for Polynomial<T> {
+
+	fn zero() -> Self {
+		return Self::new(vec![]);
+	}
+
+	fn is_zero(&self) -> bool {
+		return self.coefficients.len() == 0;
+	}
+}
+
+impl<T: Debug + Copy + Add<Output = T> + Zero + Mul<Output = T>> Mul for Polynomial<T> {
 	type Output = Self;
 
 	fn mul(self, other: Self) -> Self {
@@ -53,16 +91,23 @@ impl<T: Debug + Copy + Add<Output = T> + Mul<Output = T>> Mul for Polynomial<T> 
 	}
 }
 
-impl<T: Debug + Copy + Add + Mul> Polynomial<T> {
+impl<T: Debug + Copy + Add<Output = T> + Zero + Mul<Output = T>> Polynomial<T> {
 
 	pub fn new(coefficients: Vec<T>) -> Self {
-		Self {
+		let mut to_return = Self {
 			coefficients
-		}
+		};
+		to_return.reduce();
+		return to_return;
 	}
 
-	pub fn zero() -> Self {
-		Self::new(Vec::new())
+	pub fn new_term(coefficient: T, power: usize) -> Self {
+		let coefficients = Vec::new();
+		for i in 0..power {
+			coefficients.push(T::zero());
+		}
+		coefficients.push(coefficient);
+		Self::new(coefficients)
 	}
 
 	pub fn get_degree(&self) -> i8 {
@@ -86,6 +131,15 @@ impl<T: Debug + Copy + Add + Mul> Polynomial<T> {
 				}
 				so_far
 			}
+		}
+	}
+
+	fn reduce(&mut self) {
+		while let Some(l) = self.coefficients.last() {
+			match l.is_zero() {
+				true => self.coefficients.pop(),
+				false => return
+			};
 		}
 	}
 
@@ -116,6 +170,18 @@ mod test {
 	use super::*;
 
 	#[test]
+	fn test_quotient_ring_gets_representative() {
+
+		let ring = QuotientRing::new(Polynomial::new(vec![0, 1])); // f(x) = x => x = 0 => should reduce to a_0
+		assert_eq!(ring.get_representative(Polynomial::new(vec![9, 3, -1, 14, 7, 2, 3])), Polynomial::new(vec![9]));
+
+		let ring = QuotientRing::new(Polynomial::new(vec![2, 0, -1])); // f(x) = x^2 - 2 => x^2 = 2
+		let p = Polynomial::new(vec![-5, -1, 1, 3]); // 3x^3 + x^2 - x - 5 => 3*2*x + 2 - x - 5 = 5x - 3
+		assert_eq!(ring.get_representative(p), Polynomial::new(vec![-3, 5]));
+
+	}
+
+	#[test]
 	fn test_polynomial_initializes() {
 		let p_over_c = Polynomial::new(vec![Complex::new(2.0, 3.0), Complex::new(-6.5, 2.1)]);
 		assert_eq!(p_over_c.to_string(), "Complex { re: 2.0, im: 3.0 } + Complex { re: -6.5, im: 2.1 }x".to_string());
@@ -126,9 +192,25 @@ mod test {
 		let p_over_z = Polynomial::new(vec![-7, 4, -100]);
 		assert_eq!(p_over_z.to_string(), "-7 + 4x + -100x^2".to_string());
 
-		let same_p_over_z = Polynomial::new(vec![-7, 4, -100]);
+		let same_p_over_z = Polynomial::new(vec![-7, 4, -100, 0, 0]);
 		assert_eq!(p_over_z, same_p_over_z);
 
+	}
+
+	#[test]
+	fn test_new_term() {
+		assert_eq!(
+			Polynomial::new_term(Complex::new(3.1, -2.7), 4),
+			Polynomial::new(
+				vec![
+					Complex::zero(),
+					Complex::zero(),
+					Complex::zero(),
+					Complex::zero(),
+					Complex::new(3.1, -2.7)
+				]
+			)
+		);
 	}
 
 	#[test]
@@ -140,12 +222,17 @@ mod test {
 	#[test]
 	fn test_polynomial_adds() {
 
-		let p = Polynomial::new(vec![3, 2, 1]);
+		let p = Polynomial::new(vec![3, 2, 1, 0]);
 		let q = Polynomial::new(vec![9, 5, 4, 2, 2]);
 
 		let r = p.clone() + q.clone();
 		assert_eq!(r, Polynomial::new(vec![12, 7, 5, 2, 2]));
 		assert_eq!(q + p, r);
+	}
+
+	#[test]
+	fn test_zero() {
+		assert_eq!(Polynomial::zero(), Polynomial::new(vec![0, 0, 0]));
 	}
 
 	#[test]
